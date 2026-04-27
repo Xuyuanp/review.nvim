@@ -44,6 +44,27 @@ local function buf_file(bufnr)
     return vim.fn.fnamemodify(abs, ':.') or abs
 end
 
+--- Build the float window title from an annotation.
+---@param ann { scope: string, file?: string, lnum?: integer, start_lnum?: integer }
+---@return string|{[1]: string, [2]: string}[]
+local function float_title(ann)
+    local file = ann.file
+    if ann.scope == 'file' and file and file ~= '' then
+        return ' ' .. file .. ' '
+    elseif ann.scope == 'line' and file and file ~= '' and ann.lnum then
+        return { { ' ' .. file .. ':', 'FloatTitle' }, { 'L' .. ann.lnum, 'Number' }, { ' ', 'FloatTitle' } }
+    elseif ann.scope == 'range' and file and file ~= '' and ann.start_lnum and ann.lnum then
+        return {
+            { ' ' .. file .. ':', 'FloatTitle' },
+            { 'L' .. ann.start_lnum .. '~' .. ann.lnum, 'Number' },
+            { ' ', 'FloatTitle' },
+        }
+    elseif ann.scope == 'overall' then
+        return ' Overall Annotation '
+    end
+    return ' Review Annotation '
+end
+
 --- Optional setup. Merges user config and registers VimLeavePre if output is set.
 ---@param opts? review.Config
 function M.setup(opts)
@@ -102,6 +123,7 @@ function M._annotate_overall()
     local existing = state:find_overall()
 
     ui.open_float({
+        title = float_title({ scope = 'overall' }),
         text = existing and existing.text or nil,
         float_width = config.float_width,
         float_height = config.float_height,
@@ -131,6 +153,7 @@ function M._annotate_file()
     local existing = state:find_file(file)
 
     ui.open_float({
+        title = float_title({ scope = 'file', file = file }),
         text = existing and existing.text or nil,
         float_width = config.float_width,
         float_height = config.float_height,
@@ -207,6 +230,7 @@ function M._annotate_line_or_range()
         end
 
         ui.open_float({
+            title = float_title({ scope = 'range', file = file, lnum = end_lnum, start_lnum = start_lnum }),
             float_width = config.float_width,
             float_height = config.float_height,
             on_close = function(text)
@@ -232,6 +256,7 @@ function M._annotate_line_or_range()
         if existing then
             -- Edit existing
             ui.open_float({
+                title = float_title(existing),
                 text = existing.text,
                 float_width = config.float_width,
                 float_height = config.float_height,
@@ -246,6 +271,7 @@ function M._annotate_line_or_range()
         else
             -- New line annotation
             ui.open_float({
+                title = float_title({ scope = 'line', file = file, lnum = lnum }),
                 float_width = config.float_width,
                 float_height = config.float_height,
                 on_close = function(text)

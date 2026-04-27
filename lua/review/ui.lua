@@ -217,7 +217,7 @@ function M.make_on_change(config)
 end
 
 --- Open a floating window for annotation input.
----@param opts { text?: string, on_close: fun(text: string), float_width: integer, float_height: integer }
+---@param opts { title?: string, text?: string, on_close: fun(text: string), float_width: integer, float_height: integer }
 function M.open_float(opts)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.bo[buf].filetype = 'markdown'
@@ -258,7 +258,7 @@ function M.open_float(opts)
         col = col,
         style = 'minimal',
         border = 'rounded',
-        title = ' Review Annotation ',
+        title = opts.title or ' Review Annotation ',
         title_pos = 'center',
     })
 
