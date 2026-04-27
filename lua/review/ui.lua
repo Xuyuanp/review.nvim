@@ -2,6 +2,11 @@ local M = {}
 
 local ns = vim.api.nvim_create_namespace('review')
 
+---@class review.HelpEntry
+---@field lhs string
+---@field mode string
+---@field desc string
+
 local HL_BORDER = 'ReviewBorder'
 local HL_TEXT = 'ReviewText'
 
@@ -303,6 +308,100 @@ function M.open_preview(markdown, opts)
         style = 'minimal',
         border = 'rounded',
         title = ' Review Preview ',
+        title_pos = 'center',
+    })
+
+    vim.keymap.set('n', 'q', function()
+        if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, true)
+        end
+    end, { buffer = buf, nowait = true })
+end
+
+--- Build help lines from keymap entries.
+--- Deduplicates entries that share both lhs and desc, appends a mode tag when
+--- the binding is not plain normal-mode.
+---@param entries review.HelpEntry[]
+---@return string[] lines
+local function build_help_lines(entries)
+    -- Deduplicate entries that share both lhs AND desc (same key, same action).
+    -- Entries with the same lhs but different desc (e.g. 'a' normal="annotate line",
+    -- visual="annotate range") are kept as separate rows.
+    ---@type {lhs: string, modes: string[], desc: string}[]
+    local merged = {}
+    ---@type table<string, integer> key = "lhs\0desc" -> index into merged
+    local seen = {}
+    for _, e in ipairs(entries) do
+        local key = e.lhs .. '\0' .. e.desc
+        if seen[key] then
+            local m = merged[seen[key]]
+            m.modes[#m.modes + 1] = e.mode
+        else
+            merged[#merged + 1] = { lhs = e.lhs, modes = { e.mode }, desc = e.desc }
+            seen[key] = #merged
+        end
+    end
+
+    -- Find max lhs width for alignment
+    local max_lhs = 0
+    for _, entry in ipairs(merged) do
+        if #entry.lhs > max_lhs then
+            max_lhs = #entry.lhs
+        end
+    end
+
+    local lines = { 'Review Keymaps', '' }
+    for _, entry in ipairs(merged) do
+        -- Show mode tag unless the only mode is 'n' (the common default)
+        local mode_tag = ''
+        if not (entry.modes[1] == 'n' and #entry.modes == 1) then
+            mode_tag = ' [' .. table.concat(entry.modes, ',') .. ']'
+        end
+        lines[#lines + 1] = '  ' .. entry.lhs .. string.rep(' ', max_lhs - #entry.lhs + 4) .. entry.desc .. mode_tag
+    end
+
+    return lines
+end
+
+--- Show keymaps help in a floating window.
+---@param entries review.HelpEntry[]
+function M.open_help(entries)
+    if #entries == 0 then
+        vim.notify('review: no keymaps active on this buffer', vim.log.levels.INFO)
+        return
+    end
+
+    local lines = build_help_lines(entries)
+
+    -- Compute max display width for the float
+    local max_width = 0
+    for _, line in ipairs(lines) do
+        local w = vim.fn.strdisplaywidth(line)
+        if w > max_width then
+            max_width = w
+        end
+    end
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modifiable = false
+    vim.bo[buf].bufhidden = 'wipe'
+
+    local width = max_width + 2
+    local height = #lines
+    local uis = vim.api.nvim_list_uis()[1]
+    local row = math.floor((uis.height - height) / 2)
+    local col = math.floor((uis.width - width) / 2)
+
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = ' Help ',
         title_pos = 'center',
     })
 

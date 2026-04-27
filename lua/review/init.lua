@@ -367,54 +367,20 @@ end
 
 --- Show keymaps help in a floating window.
 function M.help()
-    local lines = {
-        'Review Keymaps',
-        '',
-        '  a     annotate line (normal) / range (visual)',
-        '  A     annotate file',
-        '  o     annotate overall',
-        '  P     preview annotations',
-        '  X     discard all annotations',
-        '  ]]    next annotation',
-        '  [[    previous annotation',
-        '  gp    pick annotation',
-        '  H     show this help',
-    }
-
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    vim.bo[buf].modifiable = false
-    vim.bo[buf].bufhidden = 'wipe'
-
-    local width = 44
-    local height = #lines
-    local uis = vim.api.nvim_list_uis()[1]
-    local row = math.floor((uis.height - height) / 2)
-    local col = math.floor((uis.width - width) / 2)
-
-    local win = vim.api.nvim_open_win(buf, true, {
-        relative = 'editor',
-        width = width,
-        height = height,
-        row = row,
-        col = col,
-        style = 'minimal',
-        border = 'rounded',
-        title = ' Help ',
-        title_pos = 'center',
-    })
-
-    vim.keymap.set('n', 'q', function()
-        if vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_win_close(win, true)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local entries = {}
+    for _, mode in ipairs({ 'n', 'x' }) do
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(bufnr, mode)) do
+            if map.desc and map.desc:find('^Review:') then
+                entries[#entries + 1] = {
+                    lhs = map.lhs,
+                    mode = mode,
+                    desc = map.desc:gsub('^Review:%s*', ''),
+                }
+            end
         end
-    end, { buffer = buf, nowait = true })
-
-    vim.keymap.set('n', 'H', function()
-        if vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_win_close(win, true)
-        end
-    end, { buffer = buf, nowait = true })
+    end
+    ui.open_help(entries)
 end
 
 --- Discard all annotations and clear all UI.
