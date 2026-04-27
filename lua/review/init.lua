@@ -326,48 +326,43 @@ function M.preview()
     })
 end
 
---- Set up global keymaps for review mode.
+--- Set buffer-local review keymaps on a single buffer.
+---@param bufnr integer
+local function set_buf_keymaps(bufnr)
+    local bopts = function(desc)
+        return { buffer = bufnr, desc = desc }
+    end
+    vim.keymap.set('n', 'a', function() M.annotate() end, bopts('Review: annotate line'))
+    vim.keymap.set('x', 'a', function() M.annotate() end, bopts('Review: annotate range'))
+    vim.keymap.set('n', 'A', function() M.annotate('file') end, bopts('Review: annotate file'))
+    vim.keymap.set('n', 'o', function() M.annotate('overall') end, bopts('Review: annotate overall'))
+    vim.keymap.set('n', 'P', function() M.preview() end, bopts('Review: preview annotations'))
+    vim.keymap.set('n', 'X', function() M.reset() end, bopts('Review: discard all annotations'))
+    vim.keymap.set('n', ']]', function() M.next() end, bopts('Review: next annotation'))
+    vim.keymap.set('n', '[[', function() M.prev() end, bopts('Review: previous annotation'))
+    vim.keymap.set('n', 'gp', function() M.pick() end, bopts('Review: pick annotation'))
+    vim.keymap.set('n', 'H', function() M.help() end, bopts('Review: show keymaps help'))
+end
+
+--- Set up review keymaps for normal file buffers only.
 --- Intended for readonly sessions (`nvim -R`).
 function M._setup_keymaps()
-    vim.keymap.set('n', 'a', function()
-        M.annotate()
-    end, { desc = 'Review: annotate line' })
+    -- Apply to all existing normal buffers
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == '' and vim.bo[bufnr].readonly then
+            set_buf_keymaps(bufnr)
+        end
+    end
 
-    vim.keymap.set('x', 'a', function()
-        M.annotate()
-    end, { desc = 'Review: annotate range' })
-
-    vim.keymap.set('n', 'A', function()
-        M.annotate('file')
-    end, { desc = 'Review: annotate file' })
-
-    vim.keymap.set('n', 'o', function()
-        M.annotate('overall')
-    end, { desc = 'Review: annotate overall' })
-
-    vim.keymap.set('n', 'P', function()
-        M.preview()
-    end, { desc = 'Review: preview annotations' })
-
-    vim.keymap.set('n', 'X', function()
-        M.reset()
-    end, { desc = 'Review: discard all annotations' })
-
-    vim.keymap.set('n', ']]', function()
-        M.next()
-    end, { desc = 'Review: next annotation' })
-
-    vim.keymap.set('n', '[[', function()
-        M.prev()
-    end, { desc = 'Review: previous annotation' })
-
-    vim.keymap.set('n', 'gp', function()
-        M.pick()
-    end, { desc = 'Review: pick annotation' })
-
-    vim.keymap.set('n', 'H', function()
-        M.help()
-    end, { desc = 'Review: show keymaps help' })
+    -- Apply to future normal buffers
+    vim.api.nvim_create_autocmd('BufEnter', {
+        group = vim.api.nvim_create_augroup('ReviewKeymaps', { clear = true }),
+        callback = function(ev)
+            if vim.bo[ev.buf].buftype == '' and vim.bo[ev.buf].readonly then
+                set_buf_keymaps(ev.buf)
+            end
+        end,
+    })
 end
 
 --- Show keymaps help in a floating window.
