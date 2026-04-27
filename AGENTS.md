@@ -53,3 +53,4 @@ When adding features, preserve these — they are tested and relied on by caller
 - `stylua`: 4-space indent, 150-col width, single quotes preferred, no collapsed simple statements (see `.stylua.toml`).
 - `luacheck`: `lua51+nvim`, with `vim` and `MiniTest` as read-only globals; max-line-length (631) is ignored. Unused args prefixed with `_` are ignored.
 - All annotations, comments, and LuaCATS `---@` types are in English; the codebase uses LuaCATS extensively — keep type annotations on new public functions and data shapes.
+- Every function `opts` parameter must have its own named `---@class` (or `---@alias`) type — never inline a table shape in `---@param opts { ... }`. Follow the `review.Config` / `review.StateOpts` / `review.OpenFloatOpts` convention. Applies to all table-shaped parameters; `opts` is just the most common offender.
