@@ -46,7 +46,7 @@ end
 
 --- Build the float window title from an annotation.
 ---@param ann { scope: string, file?: string, lnum?: integer, start_lnum?: integer }
----@return string|{[1]: string, [2]: string}[]
+---@return review.FloatTitle
 local function float_title(ann)
     local file = ann.file
     if ann.scope == 'file' and file and file ~= '' then

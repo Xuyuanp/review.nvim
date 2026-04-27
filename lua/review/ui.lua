@@ -7,6 +7,21 @@ local ns = vim.api.nvim_create_namespace('review')
 ---@field mode string
 ---@field desc string
 
+--- Float window title: either a plain string, or a list of [text, highlight] chunks
+--- (as accepted by `nvim_open_win`'s `title` option).
+---@alias review.FloatTitle string|{[1]: string, [2]: string}[]
+
+---@class review.OpenFloatOpts
+---@field title? review.FloatTitle
+---@field text? string
+---@field on_close fun(text: string)
+---@field float_width integer
+---@field float_height integer
+
+---@class review.OpenPreviewOpts
+---@field float_width integer
+---@field float_height integer
+
 local HL_BORDER = 'ReviewBorder'
 local HL_TEXT = 'ReviewText'
 
@@ -217,7 +232,7 @@ function M.make_on_change(config)
 end
 
 --- Open a floating window for annotation input.
----@param opts { title?: string, text?: string, on_close: fun(text: string), float_width: integer, float_height: integer }
+---@param opts review.OpenFloatOpts
 function M.open_float(opts)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.bo[buf].filetype = 'markdown'
@@ -283,7 +298,7 @@ end
 
 --- Open a read-only preview float showing the markdown export.
 ---@param markdown string
----@param opts { float_width: integer, float_height: integer }
+---@param opts review.OpenPreviewOpts
 function M.open_preview(markdown, opts)
     local buf = vim.api.nvim_create_buf(false, true)
     local lines = vim.split(markdown, '\n', { plain = true })
