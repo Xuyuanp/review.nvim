@@ -17,7 +17,7 @@ local M = {}
 ---@type review.Config
 local default_config = {
     output = nil,
-    sign_text = '󰅺',
+    sign_text = '',
     sign_range_start = '╭',
     sign_range_mid = '│',
     float_width = 60,
