@@ -22,17 +22,21 @@ local ns = vim.api.nvim_create_namespace('review')
 ---@field float_width integer
 ---@field float_height integer
 
+-- Built-in highlight groups. These are auto-created (if missing) so users can
+-- override them with `nvim_set_hl` (or a colorscheme) without any config.
+local HL_SIGN = 'ReviewSign'
 local HL_BORDER = 'ReviewBorder'
 local HL_TEXT = 'ReviewText'
+local HL_LINE = 'ReviewLine'
 
--- Ensure highlight groups exist
+-- Ensure built-in highlight groups exist. `default = true` means the plugin
+-- only installs these links when the group has not been defined elsewhere,
+-- so user overrides (via `nvim_set_hl` or a colorscheme) are preserved.
 local function ensure_highlights()
-    if vim.fn.hlexists(HL_BORDER) == 0 then
-        vim.api.nvim_set_hl(0, HL_BORDER, { link = 'Comment' })
-    end
-    if vim.fn.hlexists(HL_TEXT) == 0 then
-        vim.api.nvim_set_hl(0, HL_TEXT, { link = 'String' })
-    end
+    vim.api.nvim_set_hl(0, HL_BORDER, { link = 'FloatBorder', default = true })
+    vim.api.nvim_set_hl(0, HL_TEXT, { link = 'SpecialComment', default = true })
+    vim.api.nvim_set_hl(0, HL_SIGN, { link = 'DiagnosticWarn', default = true })
+    vim.api.nvim_set_hl(0, HL_LINE, { link = 'DiffText', default = true })
 end
 
 --- Build virtual lines for a box around annotation text.
@@ -102,7 +106,8 @@ local function create_line_extmarks(ann, config)
     vim.api.nvim_buf_set_extmark(ann.bufnr, ns, ann.lnum - 1, 0, {
         id = ext_id,
         sign_text = config.sign_text,
-        sign_hl_group = HL_BORDER,
+        sign_hl_group = HL_SIGN,
+        line_hl_group = HL_LINE,
         virt_lines = virt_lines,
     })
 
@@ -127,7 +132,8 @@ local function create_range_extmarks(ann, config)
     vim.api.nvim_buf_set_extmark(ann.bufnr, ns, ann.lnum - 1, 0, {
         id = ext_id,
         sign_text = config.sign_text,
-        sign_hl_group = HL_BORDER,
+        sign_hl_group = HL_SIGN,
+        line_hl_group = HL_LINE,
         virt_lines = virt_lines,
     })
 
@@ -137,7 +143,8 @@ local function create_range_extmarks(ann, config)
     vim.api.nvim_buf_set_extmark(ann.bufnr, ns, ann.start_lnum - 1, 0, {
         id = ext_id + 1,
         sign_text = config.sign_range_start,
-        sign_hl_group = HL_BORDER,
+        sign_hl_group = HL_SIGN,
+        line_hl_group = HL_LINE,
     })
 
     -- Intermediate line signs: │
@@ -146,7 +153,8 @@ local function create_range_extmarks(ann, config)
         vim.api.nvim_buf_set_extmark(ann.bufnr, ns, i - 1, 0, {
             id = ext_id + offset,
             sign_text = config.sign_range_mid,
-            sign_hl_group = HL_BORDER,
+            sign_hl_group = HL_SIGN,
+            line_hl_group = HL_LINE,
         })
     end
 end

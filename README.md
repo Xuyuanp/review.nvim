@@ -19,13 +19,38 @@ require('review').setup({
 
 ```lua
 ---@class review.Config
----@field output? string           -- file path to write on exit (nil = no auto-export)
----@field sign_text? string        -- sign for annotated lines (default: "󰅺")
----@field sign_range_start? string -- range start sign (default: "╭")
----@field sign_range_mid? string   -- range intermediate sign (default: "│")
----@field float_width? integer     -- floating window width (default: 60)
----@field float_height? integer    -- floating window height (default: 10)
----@field keymaps? boolean         -- enable review keymaps (default: false)
+---@field output? string            -- file path to write on exit (nil = no auto-export)
+---@field sign_text? string         -- sign for annotated lines (default: "󰅺")
+---@field sign_range_start? string  -- range start sign (default: "╭")
+---@field sign_range_mid? string    -- range intermediate sign (default: "│")
+---@field float_width? integer      -- floating window width (default: 60)
+---@field float_height? integer     -- floating window height (default: 10)
+---@field keymaps? boolean          -- enable review keymaps (default: false)
+```
+
+### Highlights
+
+The plugin auto-creates three highlight groups on first use and only defines defaults when the group is not already set, so `nvim_set_hl` calls and colorscheme definitions are preserved.
+
+| Group          | Default link     | Purpose                                                  |
+| -------------- | ---------------- | -------------------------------------------------------- |
+| `ReviewSign`   | `DiagnosticWarn` | Sign column glyph for annotated lines and range markers. |
+| `ReviewBorder` | `FloatBorder`    | Box border around annotation text.                       |
+| `ReviewText`   | `SpecialComment` | Annotation text inside the box.                          |
+| `ReviewLine`   | `DiffText`       | Background tint on annotated lines (line + range scope). |
+
+To disable line-background tinting entirely, clear the group:
+
+```lua
+vim.api.nvim_set_hl(0, 'ReviewLine', {})
+```
+
+Override any of them with `vim.api.nvim_set_hl`:
+
+```lua
+vim.api.nvim_set_hl(0, 'ReviewSign', { link = 'DiagnosticSignWarn' })
+vim.api.nvim_set_hl(0, 'ReviewBorder', { fg = '#ff8800', bold = true })
+vim.api.nvim_set_hl(0, 'ReviewText', { link = 'Normal' })
 ```
 
 ## Keymaps
