@@ -291,6 +291,90 @@ function M._annotate_line_or_range()
     end
 end
 
+--- Format a diagnostic as `[source] message`, or just `message` if no source.
+---@param d vim.Diagnostic
+---@return string
+local function format_diagnostic(d)
+    local msg = d.message or ''
+    if d.source and d.source ~= '' then
+        return '[' .. d.source .. '] ' .. msg
+    end
+    return msg
+end
+
+--- Collect diagnostics on a given line and render them as one text block.
+---@param bufnr integer
+---@param lnum integer 1-indexed
+---@return string? text nil when there is no diagnostic on this line
+local function diagnostic_text_at(bufnr, lnum)
+    local diags = vim.diagnostic.get(bufnr, { lnum = lnum - 1 })
+    if #diags == 0 then
+        return nil
+    end
+    table.sort(diags, function(a, b)
+        return (a.col or 0) < (b.col or 0)
+    end)
+    local parts = {}
+    for _, d in ipairs(diags) do
+        parts[#parts + 1] = format_diagnostic(d)
+    end
+    return table.concat(parts, '\n')
+end
+
+--- Inject LSP diagnostics on the current line into an annotation.
+--- Opens the annotation float pre-filled with the diagnostic text; when an
+--- annotation already exists on the line, the diagnostic text is appended
+--- to the existing text (newline-separated) in the float for the user to
+--- confirm, edit, or cancel.
+function M.annotate_diagnostic()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local lnum = vim.fn.line('.')
+    local file = buf_file(bufnr)
+
+    local diag_text = diagnostic_text_at(bufnr, lnum)
+    if not diag_text then
+        vim.notify('review: no diagnostic on this line', vim.log.levels.INFO)
+        return
+    end
+
+    local existing = state:find(bufnr, lnum)
+    local title, prefill, on_close
+    if existing then
+        title = float_title(existing)
+        prefill = existing.text ~= '' and (existing.text .. '\n' .. diag_text) or diag_text
+        on_close = function(text)
+            if text == '' then
+                state:delete(existing.id)
+            else
+                state:update(existing.id, text)
+            end
+        end
+    else
+        title = float_title({ scope = 'line', file = file, lnum = lnum })
+        prefill = diag_text
+        on_close = function(text)
+            if text ~= '' then
+                state:add({
+                    scope = 'line',
+                    file = file,
+                    lnum = lnum,
+                    text = text,
+                    source_lines = read_source_lines(bufnr, lnum, lnum),
+                    bufnr = bufnr,
+                })
+            end
+        end
+    end
+
+    ui.open_float({
+        title = title,
+        text = prefill,
+        float_width = config.float_width,
+        float_height = config.float_height,
+        on_close = on_close,
+    })
+end
+
 --- Jump to next annotation in current buffer.
 function M.next()
     local bufnr = vim.api.nvim_get_current_buf()
@@ -385,6 +469,9 @@ local function set_buf_keymaps(bufnr)
     vim.keymap.set('n', 'gp', function()
         M.pick()
     end, bopts('Review: pick annotation'))
+    vim.keymap.set('n', 'D', function()
+        M.annotate_diagnostic()
+    end, bopts('Review: annotate diagnostic'))
     vim.keymap.set('n', 'H', function()
         M.help()
     end, bopts('Review: show keymaps help'))

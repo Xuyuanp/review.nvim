@@ -69,6 +69,7 @@ intended for `nvim -R` sessions only. Press `H` to show this table in-editor.
 | `]]` | normal | Next annotation           |
 | `[[` | normal | Previous annotation       |
 | `gp` | normal | Pick annotation           |
+| `D`  | normal | Annotate diagnostic on current line |
 | `H`  | normal | Show keymaps help         |
 
 ## API
@@ -78,6 +79,7 @@ local review = require('review')
 
 review.setup(opts?)   -- configure and register keymaps/autocmds
 review.annotate(scope?) -- create/edit/delete annotation (adapts to context)
+review.annotate_diagnostic() -- inject LSP diagnostic on current line into annotation
 review.next()         -- jump to next annotation
 review.prev()         -- jump to previous annotation
 review.pick()         -- list annotations via vim.ui.select
